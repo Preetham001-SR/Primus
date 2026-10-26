@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum VisitStatus {
+  PENDING_CONFIRMATION
+  CONFIRMED
+  NEEDS_ALTERNATIVE
+  CANCELLED
+  ATTENDED
+  NO_SHOW
+}
+
+enum PickupPreference {
+  REQUESTED
+  NOT_REQUESTED
+}
+
+enum LeadTemperature {
+  HOT
+  WARM
+  NURTURE
+}
+
+model SiteVisitLead {
+  id                    String            @id @default(cuid())
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  fullName              String
+  phone                 String
+  email                 String?
+  buyerType             String
+  configuration         String
+  budgetRange           String
+  purchaseTimeline      String
+
+  preferredDate         DateTime
+  preferredTimeWindow   String
+  visitorCount          String
+  pickupPreference      PickupPreference
+  pickupArea            String?
+  notes                 String?
+
+  consentToContact      Boolean
+  consentRecordedAt     DateTime
+  privacyPolicyUrl      String?
+
+  source                String?           @default("olympia_site_visit_form")
+  landingPage           String?
+  leadScore             Int               @default(0)
+  leadTemperature       LeadTemperature   @default(NURTURE)
+  visitStatus           VisitStatus       @default(PENDING_CONFIRMATION)
+
+  assignedTo            String?
+  salesNotes            String?
+  confirmedAt           DateTime?
+  confirmedTimeWindow   String?
+  pickupConfirmed       Boolean           @default(false)
+  pickupConfirmedAt     DateTime?
+  attendedAt            DateTime?
+
+  @@index([createdAt])
+  @@index([visitStatus, preferredDate])
+  @@index([leadTemperature, createdAt])
+  @@index([phone, createdAt])
+}
