@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { bookingSchema, scoreLead } from "@/lib/validation";
+import { syncLeadToZohoCRM } from "@/lib/zoho";
 
 export const runtime = "nodejs";
 
@@ -122,6 +123,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Push directly to Zoho CRM REST API if credentials are provided in environment
+    syncLeadToZohoCRM({
+      fullName: input.fullName,
+      phone: input.phone,
+      email: input.email,
+      buyerType: input.buyerType,
+      configuration: input.configuration,
+      budgetRange: input.budgetRange,
+      purchaseTimeline: input.purchaseTimeline,
+      preferredDate: input.preferredDate,
+      preferredTimeWindow: input.preferredTimeWindow,
+      visitorCount: input.visitorCount,
+      pickupPreference: input.pickupPreference,
+      pickupArea: input.pickupArea,
+      notes: input.notes,
+      consentToContact: input.consentToContact,
+      leadScore: score,
+      leadTemperature,
+      visitStatus: lead.visitStatus,
+      leadId: lead.id
+    }).catch((err) => console.error("Zoho CRM background sync error:", err));
+
     return NextResponse.json({
       ok: true,
       message: "Your Olympia visit request has been received.",
@@ -137,6 +160,29 @@ export async function POST(request: NextRequest) {
     if (process.env.NODE_ENV !== "production") {
       const demoId = "DEV-" + Math.random().toString(36).substring(2, 8).toUpperCase();
       console.warn("Dev mode: local PostgreSQL offline. Providing fallback confirmation for UI demo:", demoId);
+
+      // Attempt Zoho sync even in dev fallback if credentials exist
+      syncLeadToZohoCRM({
+        fullName: input.fullName,
+        phone: input.phone,
+        email: input.email,
+        buyerType: input.buyerType,
+        configuration: input.configuration,
+        budgetRange: input.budgetRange,
+        purchaseTimeline: input.purchaseTimeline,
+        preferredDate: input.preferredDate,
+        preferredTimeWindow: input.preferredTimeWindow,
+        visitorCount: input.visitorCount,
+        pickupPreference: input.pickupPreference,
+        pickupArea: input.pickupArea,
+        notes: input.notes,
+        consentToContact: input.consentToContact,
+        leadScore: score,
+        leadTemperature,
+        visitStatus: "PENDING_CONFIRMATION",
+        leadId: demoId
+      }).catch((err) => console.error("Zoho CRM dev sync error:", err));
+
       return NextResponse.json({
         ok: true,
         message: "Your Olympia visit request has been received.",
